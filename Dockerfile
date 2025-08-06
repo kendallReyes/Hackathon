@@ -1,25 +1,7 @@
-# Etapa de construcción
-FROM node:18 AS build
+# Etapa 1: Build de dependencias PHP
+FROM php:8.2-cli AS build
 
-WORKDIR /app
-
-# Copiamos dependencias PHP y Node
-COPY composer.json composer.lock ./
-RUN curl -sS https://getcomposer.org/installer | php && php composer.phar install --no-dev --optimize-autoloader
-
-COPY package.json package-lock.json ./
-RUN npm install --production
-
-# Copiamos el resto de la aplicación
-COPY . .
-
-# Compilamos assets si es necesario
-# RUN npm run build
-
-# Etapa de producción
-FROM php:8.2-fpm
-
-# Instalamos extensiones requeridas
+# Instala extensiones necesarias
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libonig-dev \
@@ -31,18 +13,32 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-WORKDIR /var/www/html
+# Instala Composer globalmente
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copiamos desde el build
-COPY --from=build /app /var/www/html
+# Copia los archivos del proyecto
+WORKDIR /var/www
+COPY . .
 
-# Copiamos el Composer del build
-COPY --from=build /app/vendor /var/www/html/vendor
+# Instala las dependencias PHP
+RUN composer install --no-dev --optimize-autoloader
 
-# Configuraciones de Laravel
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+# Etapa 2: Producción
+FROM php:8.2-apache
 
-# Entrypoint para comandos extra si los necesitas
-CMD ["php-fpm"]
+# Instala extensiones necesarias también en producción
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+
+# Copia el proyecto ya construido desde la etapa anterior
+COPY --from=build /var/www /var/www
+
+# Configura Apache
+COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
+RUN a2enmod rewrite
+
+WORKDIR /var/www

@@ -51,9 +51,17 @@
         </header>
         <div class="flex items-center justify-center w-full transition-opacity opacity-100 duration-750 lg:grow starting:opacity-0">
             <main class="flex max-w-[335px] w-full flex-col-reverse lg:max-w-4xl lg:flex-row">
+                @php
+                    $names = \Illuminate\Support\Facades\DB::table('integrante')->pluck('name');
+                @endphp
+
                 <div class="flex-1 p-6 pb-12 lg:p-20 text-[13px] leading-[20px] bg-white dark:bg-[#161615] text-black dark:text-[#EDEDEC] shadow-[inset_0_0_0_1px_rgba(26,26,0,0.16)] dark:shadow-[inset_0_0_0_1px_#fffaed2d] rounded-bl-lg rounded-br-lg lg:rounded-tl-lg lg:rounded-br-none">
                     <h1 class="text-xl font-semibold mb-2">Bienvenidos</h1>
-                    <h2 class="text-lg font-medium">Allison Blanco y Kendall Reyes</h2>
+                    <h2 class="text-lg font-medium">
+                        @foreach ($names as $name)
+                            {{ $name }}@if (!$loop->last), @endif
+                        @endforeach
+                    </h2>
                 </div>
 
                 <div class="bg-[#fff2f2] dark:bg-[#1D0002] relative lg:-ml-px -mb-px lg:mb-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg aspect-[335/376] lg:aspect-auto w-full lg:w-[438px] shrink-0 overflow-hidden">
